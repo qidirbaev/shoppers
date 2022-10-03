@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { NoCategoryFoundException } from 'src/common/exceptions/no-category.exception';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { DiscountDto } from './dto/discount.dto';
 
 @Injectable()
 export class ProductService {
@@ -21,6 +21,24 @@ export class ProductService {
       });
 
       return newProduct;
+    } catch (err) {
+      console.log({ err });
+      throw new BadRequestException(err);
+    }
+  }
+
+  async discount(discount: DiscountDto) {
+    try {
+      const newDiscount = await this.prisma.discount.create({
+        data: {
+          name: discount.name,
+          desc: discount.desc,
+          discount_percent: discount.discount_percent,
+          active: discount.active,
+        },
+      });
+
+      return newDiscount;
     } catch (err) {
       console.log({ err });
       throw new BadRequestException(err);

@@ -6,12 +6,9 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 export class CategoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createCategory(category: CreateCategoryDto) {
+  async createCategory(data: CreateCategoryDto) {
     const newCategory = await this.prisma.productCategory.create({
-      data: {
-        name: category.name,
-        desc: category.desc,
-      },
+      data,
     });
 
     return newCategory;
