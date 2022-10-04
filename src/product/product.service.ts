@@ -27,6 +27,23 @@ export class ProductService {
     }
   }
 
+  async getAllProducts() {
+    try {
+      const products = await this.prisma.product.findMany({
+        include: {
+          discount: true,
+        },
+        skip: 0,
+        take: 10,
+      });
+
+      return products;
+    } catch (err) {
+      console.log({ err });
+      throw new BadRequestException(err);
+    }
+  }
+
   async discount(discount: DiscountDto) {
     try {
       const newDiscount = await this.prisma.discount.create({
