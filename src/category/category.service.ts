@@ -13,4 +13,14 @@ export class CategoryService {
 
     return newCategory;
   }
+
+  async getAllCategories() {
+    const categories = await this.prisma.productCategory.findMany({
+      include: {
+        products: true,
+      },
+    });
+
+    return categories;
+  }
 }

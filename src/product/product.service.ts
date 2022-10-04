@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { InventoryDto } from './dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { DiscountDto } from './dto/discount.dto';
 
@@ -33,8 +34,6 @@ export class ProductService {
         include: {
           discount: true,
         },
-        skip: 0,
-        take: 10,
       });
 
       return products;
@@ -56,6 +55,52 @@ export class ProductService {
       });
 
       return newDiscount;
+    } catch (err) {
+      console.log({ err });
+      throw new BadRequestException(err);
+    }
+  }
+
+  async getAllDiscounts() {
+    try {
+      const discounts = await this.prisma.discount.findMany({
+        include: {
+          products: true,
+        },
+      });
+
+      return discounts;
+    } catch (err) {
+      console.log({ err });
+      throw new BadRequestException(err);
+    }
+  }
+
+  async inventory(inventory: InventoryDto) {
+    try {
+      const newInventory = await this.prisma.productInventory.create({
+        data: {
+          quantity: inventory.quantity,
+          product_id: inventory.product_id,
+        },
+      });
+
+      return newInventory;
+    } catch (err) {
+      console.log({ err });
+      throw new BadRequestException(err);
+    }
+  }
+
+  async getAllInventory() {
+    try {
+      const inventory = await this.prisma.productInventory.findMany({
+        include: {
+          product: true,
+        },
+      });
+
+      return inventory;
     } catch (err) {
       console.log({ err });
       throw new BadRequestException(err);
