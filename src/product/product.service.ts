@@ -10,27 +10,29 @@ import {
 export class ProductService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createProduct(product: CreateProductDto) {
-    try {
-      const newProduct = await this.prisma.product.create({
-        data: {
-          name: product.name,
-          desc: product.desc,
-          SKU: product.SKU,
-          category_id: product.category_id,
-          price: product.price,
-          discount_by: product.discount_by,
-          quantity: product.quantity,
-          image: product.image[0],
-        },
-      });
+  private searchCache: Array<any> = [];
 
-      return newProduct;
-    } catch (err) {
-      console.log({ err });
-      throw new BadRequestException(err);
-    }
-  }
+  // async createProduct(product: CreateProductDto) {
+  //   try {
+  //     const newProduct = await this.prisma.product.create({
+  //       data: {
+  //         name: product.name,
+  //         desc: product.desc,
+  //         SKU: product.SKU,
+  //         category_id: product.category_id,
+  //         price: product.price,
+  //         discount_by: product.discount_by,
+  //         quantity: product.quantity,
+  //         image: product.image[0],
+  //       },
+  //     });
+
+  //     return newProduct;
+  //   } catch (err) {
+  //     console.log({ err });
+  //     throw new BadRequestException(err);
+  //   }
+  // }
 
   async getAllProducts() {
     try {
@@ -112,5 +114,49 @@ export class ProductService {
     });
 
     return categories;
+  }
+
+  async searchProducts(query: string) {
+    const results = await this.searchProductsCache(query);
+    return results;
+  }
+
+  searchProductsCache(query: string) {
+    return new Promise(async (resolve) => {
+      const search = this.searchCache.find(
+        (item) => item.query === query
+      );
+
+      if (search) {
+        return search.results;
+      }
+
+      const results = await this.prisma.product.findMany({
+        where: {
+          name: {
+            contains: query,
+          },
+        },
+        include: {
+          product_category: {
+            select: {
+              name: true,
+            },
+          },
+          discount: true,
+        },
+      });
+
+      if (this.searchCache.length > 100) {
+        this.searchCache.splice(0, 1);
+      }
+
+      this.searchCache.push({
+        query,
+        results,
+      });
+
+      return resolve(results);
+    });
   }
 }

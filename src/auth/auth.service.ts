@@ -5,6 +5,8 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { Tokens } from './types/token.type';
 import { JwtService } from '@nestjs/jwt';
+import { RoleEnum } from 'src/common/enums/roles.enum';
+import { AdminDto } from './dto/admin.dto';
 
 @Injectable()
 export class AuthService {
@@ -15,30 +17,31 @@ export class AuthService {
 
   async signTokens(
     userId: number,
-    username: string
+    username: string,
+    role: string
   ): Promise<Tokens> {
-    const [access_token, refresh_token] = await Promise.all([
-      this.jwtService.signAsync(
-        {
-          sub: userId,
-          username,
-        },
-        {
-          expiresIn: '15m',
-          secret: 'access-token-secret',
-        }
-      ),
-      this.jwtService.signAsync(
-        {
-          sub: userId,
-          username,
-        },
-        {
-          expiresIn: '7d',
-          secret: 'refresh-token-secret',
-        }
-      ),
-    ]);
+    const access_token = await this.jwtService.signAsync(
+      {
+        sub: userId,
+        username,
+        role,
+      },
+      {
+        expiresIn: '15m',
+        secret: 'access-token-secret',
+      }
+    );
+    const refresh_token = await this.jwtService.signAsync(
+      {
+        sub: userId,
+        username,
+        role,
+      },
+      {
+        expiresIn: '7d',
+        secret: 'refresh-token-secret',
+      }
+    );
     return {
       access_token,
       refresh_token,
@@ -70,6 +73,7 @@ export class AuthService {
           first_name: body.first_name,
           last_name: body.last_name,
           telephone: body.telephone,
+          role: RoleEnum.USER,
         },
       });
 
@@ -77,26 +81,35 @@ export class AuthService {
         await this.prisma.userAddress.create({
           data: {
             user_id: newUser.id,
-            address_line1: body.user_address[0].address_line1,
-            address_line2: body.user_address[0].address_line2,
-            city: body.user_address[0].city,
-            postal_code: body.user_address[0].postal_code,
-            country: body.user_address[0].country,
-            telephone: body.user_address[0].telephone,
-            mobile: body.user_address[0].mobile,
+            address_line1: body.user_address.address_line1,
+            address_line2: body.user_address.address_line2,
+            city: body.user_address.city,
+            postal_code: body.user_address.postal_code,
+            country: body.user_address.country,
+            telephone: body.user_address.telephone,
+            mobile: body.user_address.mobile,
           },
         });
       }
 
+      // create shopping cart
+      await this.prisma.shoppingCart.create({
+        data: {
+          user_id: newUser.id,
+        },
+      });
+
       const tokens = await this.signTokens(
         newUser.id,
-        newUser.username
+        newUser.username,
+        newUser.role
       );
 
       await this.updateRefreshToken(newUser.id, tokens.refresh_token);
 
       return tokens;
     } catch (error) {
+      console.log({ error });
       throw new BadRequestException(error);
     }
   }
@@ -117,7 +130,11 @@ export class AuthService {
     if (!isValid)
       throw new BadRequestException('Invalid username or password');
 
-    const tokens = await this.signTokens(user.id, user.username);
+    const tokens = await this.signTokens(
+      user.id,
+      user.username,
+      user.role
+    );
 
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
@@ -154,7 +171,11 @@ export class AuthService {
 
     if (!isValid) throw new BadRequestException('Invalid token');
 
-    const tokens = await this.signTokens(user.id, user.username);
+    const tokens = await this.signTokens(
+      user.id,
+      user.username,
+      user.role
+    );
 
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
@@ -169,6 +190,7 @@ export class AuthService {
         },
         include: {
           user_address: true,
+          shopping_cart: true,
         },
       });
 
@@ -184,6 +206,40 @@ export class AuthService {
       const users = await this.prisma.user.findMany({});
 
       return users;
+    } catch (error) {
+      console.log({ error });
+      throw new BadRequestException(error);
+    }
+  }
+
+  async createAdmin(body: AdminDto): Promise<Tokens> {
+    try {
+      const hashedPassword = await bcrypt.hash(body.password, 10);
+
+      const newAdmin = await this.prisma.user.create({
+        data: {
+          username: body.username,
+          password: hashedPassword,
+          hashedRtx: '',
+          first_name: body.first_name,
+          last_name: body.last_name,
+          role: RoleEnum.ADMIN,
+          telephone: body.telephone,
+        },
+      });
+
+      const tokens = await this.signTokens(
+        newAdmin.id,
+        newAdmin.username,
+        newAdmin.role
+      );
+
+      await this.updateRefreshToken(
+        newAdmin.id,
+        tokens.refresh_token
+      );
+
+      return tokens;
     } catch (error) {
       console.log({ error });
       throw new BadRequestException(error);

@@ -5,7 +5,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 @Injectable()
 export class AccessTokenStrategy extends PassportStrategy(
   Strategy,
-  'jwt',
+  'jwt'
 ) {
   constructor() {
     super({

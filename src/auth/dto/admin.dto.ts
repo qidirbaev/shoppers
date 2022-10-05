@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString, IsArray } from 'class-validator';
 
-export class CreateUserDto {
+export class AdminDto {
   @IsNotEmpty()
   @IsString()
   username: string;
@@ -11,10 +11,6 @@ export class CreateUserDto {
   first_name: string;
   @IsString()
   last_name: string;
-  @IsNotEmpty()
   @IsString()
   telephone: string;
-  user_address?: any;
-  // @IsArray()
-  // user_payment: Array<any>;
 }

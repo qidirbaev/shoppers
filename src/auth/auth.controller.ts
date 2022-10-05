@@ -12,7 +12,11 @@ import {
   AccessTokenGuard,
   RefreshTokenGuard,
 } from 'src/common/decorators/guards';
+import { RolesGuard } from 'src/common/decorators/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { RoleEnum } from 'src/common/enums/roles.enum';
 import { AuthService } from './auth.service';
+import { AdminDto } from './dto/admin.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { Tokens } from './types/token.type';
@@ -58,8 +62,17 @@ export class AuthController {
   }
 
   @Get('users/all')
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles('admin')
   getAllUsers() {
     return this.authService.getAllUsers();
+  }
+
+  @Post('users/admin')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  createAdmin(@Body() body: AdminDto) {
+    return this.authService.createAdmin(body);
   }
 }

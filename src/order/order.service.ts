@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { MakeOrderDto } from './dto/make-order.dto';
+import * as _ from 'lodash';
+import { ShoppingCartItemDto } from './dto/shopping-cart-item.dto';
 
 @Injectable()
 export class OrderService {
   constructor(private readonly prisma: PrismaService) {}
-
   private totalPrice(
     productPrice: any,
     quantity: number,
@@ -25,25 +25,88 @@ export class OrderService {
     return price;
   }
 
-  async makeOrder(order: MakeOrderDto) {
-    // Check if the user address is valid
-    const address = await this.prisma.userAddress.findUnique({
-      where: {
-        id: order.user_id,
-      },
-    });
-
-    if (!address) {
-      throw new BadRequestException('Please provide a valid address');
-    }
-
+  async addToCart(inventory: ShoppingCartItemDto, userId: number) {
     const product = await this.prisma.product.findUnique({
       where: {
-        id: order.product_id,
+        id: inventory.product_id,
       },
       include: {
         discount: true,
       },
     });
+
+    if (
+      !product ||
+      product.quantity < inventory.quantity ||
+      product.in_stock === false
+    ) {
+      throw new BadRequestException('Please provide a valid product');
+    }
+
+    const total_price = this.totalPrice(
+      product.price,
+      inventory.quantity,
+      product.discount
+    );
+
+    const cart = await this.prisma.shoppingCart.update({
+      where: {
+        user_id: userId,
+      },
+      data: {
+        total_price: {
+          increment: total_price,
+        },
+        products: {
+          push: inventory.product_id,
+        },
+      },
+    });
+
+    // create probable order
+    const order = await this.prisma.order.create({
+      data: {
+        total_price,
+        user_id: userId,
+        shopping_cart_id: cart.id,
+      },
+    });
+
+    return cart;
+  }
+
+  async removeFromCart(product_id: number, userId: number) {
+    const { products: shoppingCartProducts } =
+      await this.prisma.shoppingCart.findUnique({
+        where: {
+          user_id: userId,
+        },
+        select: {
+          products: true,
+          total_price: true,
+        },
+      });
+
+    console.log({ shoppingCartProducts });
+
+    const updatedProductsArray = _.remove(
+      shoppingCartProducts,
+      (i) => i !== product_id
+    );
+
+    console.log({ updatedProductsArray });
+
+    const updatedCart = await this.prisma.shoppingCart.update({
+      where: {
+        user_id: userId,
+      },
+      data: {
+        products: {
+          set: updatedProductsArray,
+        },
+      },
+    });
+
+    return updatedCart;
   }
 }
