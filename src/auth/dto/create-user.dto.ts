@@ -14,8 +14,8 @@ export class CreateUserDto {
   @IsNotEmpty()
   @IsString()
   telephone: string;
-  // @IsArray()
-  // user_address: Array<any>;
+  @IsArray()
+  user_address?: Array<any>;
   // @IsArray()
   // user_payment: Array<any>;
 }

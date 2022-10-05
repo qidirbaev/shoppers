@@ -1,13 +1,12 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { GetCurrentUser } from 'src/common/decorators/get-user.decorator';
 import {
   AccessTokenGuard,
@@ -18,36 +17,49 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { Tokens } from './types/token.type';
 
-@Controller('auth')
+@Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('local/signup')
+  @Post('auth/local/signup')
   @HttpCode(HttpStatus.CREATED)
   signupLocal(@Body() body: CreateUserDto): Promise<Tokens> {
     return this.authService.signupLocal(body);
   }
 
-  @Post('local/signin')
+  @Post('auth/local/signin')
   @HttpCode(HttpStatus.OK)
   signinLocal(@Body() body: LoginDto): Promise<Tokens> {
     return this.authService.signinLocal(body);
   }
 
-  @Post('logout')
+  @Post('auth/logout')
   @UseGuards(AccessTokenGuard)
   @HttpCode(HttpStatus.OK)
   logout(@GetCurrentUser('sub') userId: any) {
     return this.authService.logout(userId);
   }
 
-  @Post('refresh')
+  @Post('auth/refresh')
   @UseGuards(RefreshTokenGuard)
   @HttpCode(HttpStatus.OK)
   refreshTokens(
     @GetCurrentUser('sub') userId: number,
-    @GetCurrentUser('refresh_token') refresh_token: string,
+    @GetCurrentUser('refresh_token') refresh_token: string
   ) {
     return this.authService.refreshTokens(userId, refresh_token);
+  }
+
+  @Get('users/me')
+  @UseGuards(AccessTokenGuard)
+  @HttpCode(HttpStatus.OK)
+  getMe(@GetCurrentUser('sub') userId: number) {
+    return this.authService.getMe(userId);
+  }
+
+  @Get('users/all')
+  @UseGuards(AccessTokenGuard)
+  getAllUsers() {
+    return this.authService.getAllUsers();
   }
 }

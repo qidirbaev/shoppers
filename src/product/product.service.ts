@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { InventoryDto } from './dto';
-import { CreateProductDto } from './dto/create-product.dto';
-import { DiscountDto } from './dto/discount.dto';
+import {
+  CreateCategoryDto,
+  CreateProductDto,
+  DiscountDto,
+} from './dto';
 
 @Injectable()
 export class ProductService {
@@ -13,11 +15,13 @@ export class ProductService {
       const newProduct = await this.prisma.product.create({
         data: {
           name: product.name,
-          descr: product.descr,
+          desc: product.desc,
           SKU: product.SKU,
           category_id: product.category_id,
           price: product.price,
-          discount_id: product.discount_id,
+          discount_by: product.discount_by,
+          quantity: product.quantity,
+          image: product.image[0],
         },
       });
 
@@ -32,6 +36,11 @@ export class ProductService {
     try {
       const products = await this.prisma.product.findMany({
         include: {
+          product_category: {
+            select: {
+              name: true,
+            },
+          },
           discount: true,
         },
       });
@@ -43,7 +52,7 @@ export class ProductService {
     }
   }
 
-  async discount(discount: DiscountDto) {
+  async createDiscount(discount: DiscountDto) {
     try {
       const newDiscount = await this.prisma.discount.create({
         data: {
@@ -51,6 +60,17 @@ export class ProductService {
           desc: discount.desc,
           discount_percent: discount.discount_percent,
           active: discount.active,
+        },
+      });
+
+      await this.prisma.product.updateMany({
+        where: {
+          id: {
+            in: discount.products,
+          },
+        },
+        data: {
+          discount_by: newDiscount.id,
         },
       });
 
@@ -76,34 +96,21 @@ export class ProductService {
     }
   }
 
-  async inventory(inventory: InventoryDto) {
-    try {
-      const newInventory = await this.prisma.productInventory.create({
-        data: {
-          quantity: inventory.quantity,
-          product_id: inventory.product_id,
-        },
-      });
+  async createCategory(data: CreateCategoryDto) {
+    const newCategory = await this.prisma.category.create({
+      data,
+    });
 
-      return newInventory;
-    } catch (err) {
-      console.log({ err });
-      throw new BadRequestException(err);
-    }
+    return newCategory;
   }
 
-  async getAllInventory() {
-    try {
-      const inventory = await this.prisma.productInventory.findMany({
-        include: {
-          product: true,
-        },
-      });
+  async getAllCategories() {
+    const categories = await this.prisma.category.findMany({
+      include: {
+        products: true,
+      },
+    });
 
-      return inventory;
-    } catch (err) {
-      console.log({ err });
-      throw new BadRequestException(err);
-    }
+    return categories;
   }
 }

@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -11,7 +12,7 @@ export class CreateProductDto {
   name: string;
   @IsString()
   @IsNotEmpty()
-  descr: string;
+  desc: string;
   @IsNotEmpty()
   @IsString()
   SKU: string;
@@ -19,8 +20,13 @@ export class CreateProductDto {
   @IsNotEmpty()
   category_id: number;
   @IsInt()
-  discount_id: number;
+  discount_by?: number;
   @IsNotEmpty()
   @IsNumber()
   price: number;
+  @IsArray()
+  image: Array<string>;
+  @IsNotEmpty()
+  @IsInt()
+  quantity: number;
 }

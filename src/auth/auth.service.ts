@@ -10,12 +10,12 @@ import { JwtService } from '@nestjs/jwt';
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
+    private readonly jwtService: JwtService
   ) {}
 
   async signTokens(
     userId: number,
-    username: string,
+    username: string
   ): Promise<Tokens> {
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(
@@ -26,7 +26,7 @@ export class AuthService {
         {
           expiresIn: '15m',
           secret: 'access-token-secret',
-        },
+        }
       ),
       this.jwtService.signAsync(
         {
@@ -36,7 +36,7 @@ export class AuthService {
         {
           expiresIn: '7d',
           secret: 'refresh-token-secret',
-        },
+        }
       ),
     ]);
     return {
@@ -61,6 +61,7 @@ export class AuthService {
   async signupLocal(body: CreateUserDto): Promise<Tokens> {
     try {
       const hashedPassword = await bcrypt.hash(body.password, 10);
+
       const newUser = await this.prisma.user.create({
         data: {
           username: body.username,
@@ -72,9 +73,24 @@ export class AuthService {
         },
       });
 
+      if (body.user_address) {
+        await this.prisma.userAddress.create({
+          data: {
+            user_id: newUser.id,
+            address_line1: body.user_address[0].address_line1,
+            address_line2: body.user_address[0].address_line2,
+            city: body.user_address[0].city,
+            postal_code: body.user_address[0].postal_code,
+            country: body.user_address[0].country,
+            telephone: body.user_address[0].telephone,
+            mobile: body.user_address[0].mobile,
+          },
+        });
+      }
+
       const tokens = await this.signTokens(
         newUser.id,
-        newUser.username,
+        newUser.username
       );
 
       await this.updateRefreshToken(newUser.id, tokens.refresh_token);
@@ -133,7 +149,7 @@ export class AuthService {
 
     const isValid = await bcrypt.compare(
       refresh_token,
-      user.hashedRtx,
+      user.hashedRtx
     );
 
     if (!isValid) throw new BadRequestException('Invalid token');
@@ -143,5 +159,34 @@ export class AuthService {
     await this.updateRefreshToken(user.id, tokens.refresh_token);
 
     return tokens;
+  }
+
+  async getMe(userId: number) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        include: {
+          user_address: true,
+        },
+      });
+
+      return user;
+    } catch (error) {
+      console.log({ error });
+      throw new BadRequestException(error);
+    }
+  }
+
+  async getAllUsers() {
+    try {
+      const users = await this.prisma.user.findMany({});
+
+      return users;
+    } catch (error) {
+      console.log({ error });
+      throw new BadRequestException(error);
+    }
   }
 }

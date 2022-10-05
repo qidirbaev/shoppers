@@ -18,4 +18,5 @@ export class DiscountDto {
   @IsNotEmpty()
   @IsBoolean()
   active: boolean;
+  products: Array<number>;
 }

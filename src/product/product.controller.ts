@@ -1,26 +1,26 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { InventoryDto } from './dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { DiscountDto } from './dto/discount.dto';
 import { ProductService } from './product.service';
 
-@Controller('product')
+@Controller()
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  @Post('create')
+  @Post('product/create')
   createProduct(@Body() body: CreateProductDto): Promise<any> {
     return this.productService.createProduct(body);
   }
 
-  @Get('all')
+  @Get('product/all')
   getAllProducts(): Promise<any> {
     return this.productService.getAllProducts();
   }
 
   @Post('discount')
-  discount(@Body() body: DiscountDto): Promise<any> {
-    return this.productService.discount(body);
+  createDiscount(@Body() body: DiscountDto): Promise<any> {
+    return this.productService.createDiscount(body);
   }
 
   @Get('discount/all')
@@ -28,13 +28,13 @@ export class ProductController {
     return this.productService.getAllDiscounts();
   }
 
-  @Post('inventory')
-  inventory(@Body() body: InventoryDto): Promise<any> {
-    return this.productService.inventory(body);
+  @Post('category/create')
+  async createCategory(@Body() category: CreateCategoryDto) {
+    return this.productService.createCategory(category);
   }
 
-  @Get('inventory/all')
-  getAllInventory(): Promise<any> {
-    return this.productService.getAllInventory();
+  @Get('category/all')
+  async getAllCategories() {
+    return this.productService.getAllCategories();
   }
 }
