@@ -12,27 +12,27 @@ export class ProductService {
 
   private searchCache: Array<any> = [];
 
-  // async createProduct(product: CreateProductDto) {
-  //   try {
-  //     const newProduct = await this.prisma.product.create({
-  //       data: {
-  //         name: product.name,
-  //         desc: product.desc,
-  //         SKU: product.SKU,
-  //         category_id: product.category_id,
-  //         price: product.price,
-  //         discount_by: product.discount_by,
-  //         quantity: product.quantity,
-  //         image: product.image[0],
-  //       },
-  //     });
+  async createProduct(product: CreateProductDto) {
+    try {
+      const newProduct = await this.prisma.product.create({
+        data: {
+          name: product.name,
+          desc: product.desc,
+          SKU: product.SKU,
+          category_id: product.category_id,
+          price: product.price,
+          discount_by: product.discount_by,
+          quantity: product.quantity,
+          image: product.image,
+        },
+      });
 
-  //     return newProduct;
-  //   } catch (err) {
-  //     console.log({ err });
-  //     throw new BadRequestException(err);
-  //   }
-  // }
+      return newProduct;
+    } catch (err) {
+      console.log({ err });
+      throw new BadRequestException(err);
+    }
+  }
 
   async getAllProducts() {
     try {
@@ -121,7 +121,7 @@ export class ProductService {
     return results;
   }
 
-  searchProductsCache(query: string) {
+  private searchProductsCache(query: string) {
     return new Promise(async (resolve) => {
       const search = this.searchCache.find(
         (item) => item.query === query
@@ -158,5 +158,101 @@ export class ProductService {
 
       return resolve(results);
     });
+  }
+
+  async getProductById(id: number) {
+    const product = await this.prisma.product.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        product_category: {
+          select: {
+            name: true,
+          },
+        },
+        discount: true,
+      },
+    });
+
+    return product;
+  }
+
+  async filterProductsByCategory(categoryId: number) {
+    const products = await this.prisma.product.findMany({
+      where: {
+        category_id: {
+          equals: categoryId,
+        },
+      },
+      include: {
+        product_category: {
+          select: {
+            name: true,
+          },
+        },
+        discount: true,
+      },
+    });
+
+    return products;
+  }
+
+  async filterProductsByPrice(
+    min: number = 0,
+    max: number = Infinity
+  ) {
+    const products = await this.prisma.product.findMany({
+      where: {
+        price: {
+          gte: min,
+          lte: max,
+        },
+      },
+      include: {
+        product_category: {
+          select: {
+            name: true,
+          },
+        },
+        discount: true,
+      },
+    });
+
+    return products;
+  }
+
+  async filterProductsByDiscount(discountId: number) {
+    const products = await this.prisma.product.findMany({
+      where: {
+        discount_by: {
+          equals: discountId,
+        },
+      },
+      include: {
+        product_category: {
+          select: {
+            name: true,
+          },
+        },
+        discount: true,
+      },
+    });
+
+    return products;
+  }
+
+  private async paginateProducts(
+    page: number = 1,
+    limit: number = 10,
+    options?: any
+  ) {
+    const products = await this.prisma.product.findMany({
+      skip: (page - 1) * limit,
+      take: limit,
+      ...options,
+    });
+
+    return products;
   }
 }
