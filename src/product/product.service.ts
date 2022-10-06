@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Product } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateCategoryDto,
@@ -19,6 +20,7 @@ export class ProductService {
           name: product.name,
           desc: product.desc,
           SKU: product.SKU,
+          in_stock: true,
           category_id: product.category_id,
           price: product.price,
           discount_by: product.discount_by,
@@ -242,11 +244,31 @@ export class ProductService {
     return products;
   }
 
+  async filterProductsByDate(date: Date): Promise<Product[]> {
+    const products = await this.prisma.product.findMany({
+      where: {
+        created_at: {
+          gte: date,
+        },
+      },
+      include: {
+        product_category: {
+          select: {
+            name: true,
+          },
+        },
+        discount: true,
+      },
+    });
+
+    return products;
+  }
+
   private async paginateProducts(
     page: number = 1,
     limit: number = 10,
     options?: any
-  ) {
+  ): Promise<Product[]> {
     const products = await this.prisma.product.findMany({
       skip: (page - 1) * limit,
       take: limit,

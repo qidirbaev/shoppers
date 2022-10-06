@@ -19,8 +19,8 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Post('product/create')
-  @UseGuards(AccessTokenGuard, RolesGuard)
-  @Roles('seller')
+  // @UseGuards(AccessTokenGuard, RolesGuard)
+  // @Roles('admin')
   createProduct(@Body() body: CreateProductDto): Promise<any> {
     return this.productService.createProduct(body);
   }
@@ -31,8 +31,8 @@ export class ProductController {
   }
 
   @Post('discount')
-  @UseGuards(AccessTokenGuard, RolesGuard)
-  @Roles('admin')
+  // @UseGuards(AccessTokenGuard, RolesGuard)
+  // @Roles('admin')
   createDiscount(@Body() body: DiscountDto): Promise<any> {
     return this.productService.createDiscount(body);
   }
@@ -43,8 +43,8 @@ export class ProductController {
   }
 
   @Post('category/create')
-  @UseGuards(AccessTokenGuard, RolesGuard)
-  @Roles('admin')
+  // @UseGuards(AccessTokenGuard, RolesGuard)
+  // @Roles('admin')
   async createCategory(@Body() category: CreateCategoryDto) {
     return this.productService.createCategory(category);
   }

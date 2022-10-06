@@ -10,7 +10,7 @@ export class OrderService {
     productPrice: any,
     quantity: number,
     discount: any
-  ) {
+  ): number {
     let price: number;
 
     if (discount) {
@@ -25,7 +25,19 @@ export class OrderService {
     return price;
   }
 
-  async addToCart(inventory: ShoppingCartItemDto, userId: number) {
+  // ** All of Order Service code should be transacted in a transaction
+
+  /**
+   * @description Service to add a product to user's the shopping cart
+   * @param   {number} userId
+   * @param   {object} shoppingCartItem
+   * @returns {object} shoppingCart
+   */
+
+  async addToCart(
+    inventory: ShoppingCartItemDto,
+    userId: number
+  ): Promise<any> {
     const product = await this.prisma.product.findUnique({
       where: {
         id: inventory.product_id,
@@ -49,7 +61,7 @@ export class OrderService {
       product.discount
     );
 
-    const cart = await this.prisma.shoppingCart.update({
+    const shoppingCart = await this.prisma.shoppingCart.update({
       where: {
         user_id: userId,
       },
@@ -57,56 +69,96 @@ export class OrderService {
         total_price: {
           increment: total_price,
         },
-        products: {
-          push: inventory.product_id,
+        items: {
+          create: {
+            product_id: inventory.product_id,
+            quantity: inventory.quantity,
+            price: total_price,
+          },
+        },
+      },
+      select: {
+        id: true,
+        total_price: true,
+        items: {
+          select: {
+            id: true,
+            product_id: true,
+            quantity: true,
+            price: true,
+          },
         },
       },
     });
 
-    // create probable order
-    const order = await this.prisma.order.create({
-      data: {
-        total_price,
-        user_id: userId,
-        shopping_cart_id: cart.id,
-      },
-    });
-
-    return cart;
+    return shoppingCart;
   }
 
-  async removeFromCart(product_id: number, userId: number) {
-    const { products: shoppingCartProducts } =
-      await this.prisma.shoppingCart.findUnique({
+  async removeFromCart(
+    product_id: number,
+    userId: number
+  ): Promise<any> {
+    // TODO: Refactor this code
+    return await this.prisma.$transaction(async (_prisma) => {
+      const shoppingCart = await _prisma.shoppingCart.findUnique({
         where: {
           user_id: userId,
         },
         select: {
-          products: true,
+          id: true,
           total_price: true,
+          items: {
+            select: {
+              id: true,
+              product_id: true,
+              quantity: true,
+              price: true,
+            },
+          },
         },
       });
 
-    console.log({ shoppingCartProducts });
+      const item = _.find(shoppingCart.items, {
+        product_id: product_id,
+      });
 
-    const updatedProductsArray = _.remove(
-      shoppingCartProducts,
-      (i) => i !== product_id
-    );
+      if (!item) {
+        throw new BadRequestException(
+          'Product does not exist in your shopping cart'
+        );
+      }
 
-    console.log({ updatedProductsArray });
+      this.totalPrice(item.price, item.quantity, null);
 
-    const updatedCart = await this.prisma.shoppingCart.update({
-      where: {
-        user_id: userId,
-      },
-      data: {
-        products: {
-          set: updatedProductsArray,
+      const updatedShoppingCart = await _prisma.shoppingCart.update({
+        where: {
+          id: shoppingCart.id,
         },
-      },
-    });
+        data: {
+          total_price: {
+            decrement: item.price,
+          },
+          items: {
+            delete: {
+              id: item.id,
+            },
+          },
+        },
+        select: {
+          id: true,
+          total_price: true,
+          items: {
+            select: {
+              id: true,
+              product_id: true,
+              quantity: true,
+              price: true,
+            },
+          },
+        },
+      });
 
-    return updatedCart;
+      return updatedShoppingCart;
+    });
   }
 }
