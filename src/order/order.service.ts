@@ -122,12 +122,6 @@ export class OrderService {
         product_id: product_id,
       });
 
-      if (!item) {
-        throw new BadRequestException(
-          'Product does not exist in your shopping cart'
-        );
-      }
-
       this.totalPrice(item.price, item.quantity, null);
 
       const updatedShoppingCart = await _prisma.shoppingCart.update({
